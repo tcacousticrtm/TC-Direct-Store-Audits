@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TC Direct Store Audit Scorecard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f5f5f5;color:#1b1b1b;line-height:1.5}
+.header{background:#1b1b1b;color:#fff;padding:24px 40px;position:sticky;top:0;z-index:100}
+.header-inner{max-width:960px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.header h1{font-size:22px;font-weight:600}
+.header p{color:#888;font-size:12px;margin-top:2px}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap}
+.hbtn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
+.hbtn-export{background:#28a745;color:#fff}.hbtn-export:hover{background:#218838}
+.hbtn-detail{background:#0C5460;color:#fff}.hbtn-detail:hover{background:#0a4a52}
+.hbtn-sheets{background:#0F9D58;color:#fff}.hbtn-sheets:hover{background:#0B8043}
+.hbtn-reset{background:#444;color:#fff}.hbtn-reset:hover{background:#555}
+.container{max-width:960px;margin:0 auto;padding:20px 16px 60px}
+.status-bar{padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+.status-success{background:#D4EDDA;color:#155724;display:block}
+.status-error{background:#F8D7DA;color:#721C24;display:block}
+.status-info{background:#D1ECF1;color:#0C5460;display:block}
+.card{background:#fff;border-radius:10px;padding:24px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h2{font-size:16px;margin-bottom:14px}
+.journey-bar{display:flex;gap:0;margin-bottom:20px;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.journey-step{flex:1;padding:16px 12px;text-align:center}
+.journey-step .step-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;opacity:.7;display:block}
+.journey-step .step-name{font-size:15px;font-weight:700;display:block;margin-top:2px}
+.journey-step .step-sub{font-size:10px;opacity:.6;display:block;margin-top:1px}
+.journey-step .step-score{font-size:20px;font-weight:700;display:block;margin-top:6px}
+.journey-arrow{display:flex;align-items:center;font-size:20px;color:#ccc;padding:0 2px;background:#fff}
+.j-inspire{background:#FFF8E1;color:#F57F17}.j-educate{background:#E3F2FD;color:#1565C0}.j-convert{background:#E8F5E9;color:#2E7D32}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.meta-field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:4px;letter-spacing:.5px}
+.meta-field select,.meta-field input{width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:inherit;background:#fafafa}
+.meta-field select:focus,.meta-field input:focus{outline:none;border-color:#1b1b1b;background:#fff}
+.score-display{display:flex;align-items:center;gap:20px;margin-bottom:16px}
+.score-big{font-size:56px;font-weight:700;line-height:1}
+.score-tier{font-size:24px;font-weight:700;padding:5px 16px;border-radius:6px;display:inline-block}
+.tier-gold{background:#FFF3CD;color:#856404}.tier-a{background:#D4EDDA;color:#155724}.tier-b{background:#D1ECF1;color:#0C5460}.tier-c{background:#FFE0CC;color:#8B4513}.tier-fail{background:#F8D7DA;color:#721C24}
+.pbar{height:4px;background:#e8e8e8;border-radius:2px;margin-top:12px;overflow:hidden}
+.pfill{height:100%;background:#28a745;border-radius:2px;transition:width .3s}
+.ptxt{font-size:11px;color:#888;margin-top:4px}
+.asec{background:#fff;border-radius:10px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.asec-hd{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.asec-hd:hover{background:#fafafa}
+.asec-hd h3{font-size:14px;margin:0}
+.badge{font-size:11px;padding:3px 10px;border-radius:16px;font-weight:600;margin-left:8px}
+.badge-inspire{background:#FFF8E1;color:#F57F17}.badge-educate{background:#E3F2FD;color:#1565C0}.badge-convert{background:#E8F5E9;color:#2E7D32}
+.spct{font-size:16px;font-weight:700}
+.pass-count{font-size:12px;color:#888;margin-right:8px}
+.arw{font-size:14px;color:#999;transition:transform .2s;margin-left:10px}
+.arw.open{transform:rotate(180deg)}
+.asec-bd{padding:0 20px 20px;display:none}
+.asec-bd.open{display:block}
+/* Audit item with checkbox */
+.aitem{padding:12px 0;border-bottom:1px solid #f0f0f0}
+.aitem:last-of-type{border-bottom:none}
+.aitem-top{display:flex;align-items:flex-start;gap:12px}
+.aitem-chk{flex-shrink:0;margin-top:2px}
+.aitem-chk input[type=checkbox]{width:20px;height:20px;cursor:pointer;accent-color:#28a745}
+.itxt{font-size:13px;flex:1}
+.inum{font-size:11px;color:#bbb;margin-right:4px}
+.iapp{font-size:10px;color:#bbb;margin-top:1px}
+.itag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;background:#FFF3CD;color:#856404;margin-left:4px;font-weight:600}
+.na-label{font-size:11px;color:#aaa;padding:2px 8px;background:#f5f5f5;border-radius:4px}
+.na-btn{border:1px solid #ddd;background:#fff;color:#999;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:inherit;flex-shrink:0}
+.na-btn:hover{border-color:#adb5bd;background:#E2E3E5;color:#495057}
+.na-undo{border:1px solid #ccc;background:#f8f8f8;color:#888;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:inherit;flex-shrink:0}
+.na-undo:hover{border-color:#999;background:#fff;color:#555}
+.aitem-comment{margin-top:6px;padding-left:32px}
+.aitem-comment input{width:100%;padding:6px 8px;border:1px solid #eee;border-radius:5px;font-size:11px;font-family:inherit;color:#666;background:#fafafa}
+.aitem-comment input:focus{outline:none;border-color:#ccc;background:#fff}
+.aitem-comment input::placeholder{color:#ccc}
+.subsec-label{font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;padding:10px 0 4px;margin-top:4px}
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:#e8e8e8;border-radius:10px;padding:4px}
+.tab{flex:1;text-align:center;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#666;background:transparent;border:none;font-family:inherit}
+.tab.active{background:#fff;color:#1b1b1b;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.tc{display:none}.tc.active{display:block}
+/* Actions */
+.actrow{display:grid;grid-template-columns:1fr 130px 110px 36px;gap:8px;margin-bottom:8px;align-items:center}
+.actrow input,.actrow select{padding:7px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;background:#fafafa}
+.actrow input:focus,.actrow select:focus{outline:none;border-color:#1b1b1b;background:#fff}
+.rmbtn{width:32px;height:32px;border:none;background:#f0f0f0;border-radius:6px;cursor:pointer;font-size:14px;color:#999;display:flex;align-items:center;justify-content:center}
+.rmbtn:hover{background:#F8D7DA;color:#721C24}
+.addbtn{background:none;border:1px dashed #ccc;padding:8px;border-radius:6px;width:100%;cursor:pointer;color:#888;font-size:12px}
+.addbtn:hover{border-color:#999;color:#555}
+/* Photo table */
+.ptable{width:100%;border-collapse:collapse;font-size:12px}
+.ptable th{text-align:left;padding:8px 10px;background:#f8f8f8;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#666;border-bottom:2px solid #eee}
+.ptable td{padding:8px 10px;border-bottom:1px solid #f0f0f0}
+.ptable code{background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:11px}
+.export-info{background:#f0f7ff;border:1px solid #b8daff;border-radius:8px;padding:16px;margin-bottom:16px;font-size:13px;color:#004085}
+.export-info strong{display:block;margin-bottom:4px}
+/* Summary tab */
+.sum-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.sum-count{font-size:13px;color:#888}
+.sum-stage{margin-bottom:16px}
+.sum-stage-hd{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:8px 0 6px;border-bottom:2px solid #f0f0f0;margin-bottom:8px}
+.sum-stage-hd.inspire{color:#F57F17}.sum-stage-hd.educate{color:#1565C0}.sum-stage-hd.convert{color:#2E7D32}
+.sum-item{padding:14px 16px;background:#FFFBF0;border-left:4px solid #dc3545;border-radius:0 8px 8px 0;margin-bottom:8px}
+.sum-item-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.sum-item-text{font-size:13px;font-weight:600}
+.sum-item-num{font-size:11px;color:#999;margin-right:4px}
+.sum-item-comment{font-size:12px;color:#856404;margin-top:4px;font-style:italic}
+.sum-suggestion{margin-top:8px;padding:10px 12px;background:#fff;border-radius:6px;font-size:12px;color:#555;line-height:1.6}
+.sum-suggestion strong{color:#1b1b1b;font-size:11px;text-transform:uppercase;letter-spacing:.3px}
+.sum-all-clear{text-align:center;padding:48px 20px;color:#2F855A}
+.sum-all-clear .icon{font-size:48px;display:block;margin-bottom:8px}
+.sum-all-clear h3{font-size:16px;margin-bottom:4px}
+.sum-all-clear p{font-size:13px;color:#68D391}
+.sum-no-data{text-align:center;padding:48px 20px;color:#aaa}
+.sum-no-data .icon{font-size:48px;display:block;margin-bottom:8px}
+.scoring-guide{display:flex;gap:16px;align-items:center;padding:12px 16px;background:#f8f8f8;border-radius:8px;font-size:12px;color:#666;margin-bottom:16px;flex-wrap:wrap}
+.scoring-guide .sg-item{display:flex;align-items:center;gap:6px}
+.sg-chk-on{width:16px;height:16px;background:#28a745;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700}
+.sg-chk-off{width:16px;height:16px;border:2px solid #ccc;border-radius:3px}
+@media(max-width:768px){.meta-grid{grid-template-columns:1fr}.header-inner{flex-direction:column;align-items:flex-start}.actrow{grid-template-columns:1fr}.journey-bar{flex-direction:column}.journey-arrow{display:none}}
+@media print{.header{position:static}.tabs,.header-actions{display:none}.tc,.asec-bd{display:block!important}}
+</style>
+</head>
+<body>
+<div class="header">
+<div class="header-inner">
+<div><h1>TC Direct Store Audit Scorecard</h1><p>Monthly audit for TC Acoustic direct retail stores | Inspire → Educate → Convert</p></div>
+<div class="header-actions">
+<button class="hbtn hbtn-sheets" onclick="sendToSheets()">📊 Send to Google Sheets</button>
+<button class="hbtn hbtn-export" onclick="exportCSV()">Export Summary CSV</button>
+<button class="hbtn hbtn-detail" onclick="exportDetailCSV()">Export Detail CSV</button>
+<button class="hbtn hbtn-reset" onclick="resetAll()">Reset</button>
+</div>
+</div>
+</div>
+<div class="container">
+<div class="status-bar" id="statusBar"></div>
+<div class="tabs">
+<button class="tab active" data-tab="scorecard" onclick="switchTab('scorecard')">Scorecard</button>
+<button class="tab" data-tab="summary" onclick="switchTab('summary')">Summary</button>
+<button class="tab" data-tab="actions" onclick="switchTab('actions')">Action Items</button>
+<button class="tab" data-tab="photos" onclick="switchTab('photos')">Photo Guide</button>
+<button class="tab" data-tab="export" onclick="switchTab('export')">Export Guide</button>
+<button class="tab" data-tab="setup" onclick="switchTab('setup')">⚙ Setup</button>
+</div>
+
+<div class="tc active" id="tab-scorecard">
+<div class="card">
+<h2>Audit Details</h2>
+<div class="meta-grid">
+<div class="meta-field"><label>Store</label><select id="storeSelect" onchange="onStoreChange()"><option value="">— Select store —</option><option value="SFS">SFS — Sonos Flagship @ Wheelock</option><option value="Adelphi">Adelphi — TC Acoustic @ Adelphi</option><option value="SCS">SCS — Sonos Concept @ Starhill</option><option value="SST">SST — Sonos Store Thailand @ EmSphere</option></select></div>
+<div class="meta-field"><label>Audit Date</label><input type="date" id="auditDate"></div>
+<div class="meta-field"><label>Auditor</label><input type="text" id="auditorName" placeholder="Name"></div>
+<div class="meta-field"><label>Audit Month</label><input type="month" id="auditMonth"></div>
+<div class="meta-field"><label>Week Number</label><input type="text" id="weekNum" placeholder="e.g. W12"></div>
+<div class="meta-field"><label>Audit Type</label><select id="auditType"><option value="in-person">In-Person</option><option value="remote">Remote (Photo Submission)</option></select></div>
+</div>
+</div>
+
+<div class="scoring-guide">
+<span style="font-weight:600;">Scoring:</span>
+<div class="sg-item"><div class="sg-chk-on">✓</div> Pass</div>
+<div class="sg-item"><div class="sg-chk-off"></div> Fail</div>
+<span style="color:#aaa;">|</span>
+<span>Score = items passed ÷ total applicable items</span>
+<span style="color:#aaa;">|</span>
+<span>N/A items are excluded from scoring</span>
+<span style="color:#aaa;">|</span>
+<span>Gold 90%+ · A 80-89% · B 70-79% · C 60-69% · Fail &lt;60%</span>
+</div>
+
+<div class="journey-bar">
+<div class="journey-step j-inspire"><span class="step-label">Stage 1</span><span class="step-name">Inspire</span><span class="step-sub" id="jsub0">0/0 passed</span><span class="step-score" id="js0">—</span></div>
+<div class="journey-arrow">→</div>
+<div class="journey-step j-educate"><span class="step-label">Stage 2</span><span class="step-name">Educate</span><span class="step-sub" id="jsub1">0/0 passed</span><span class="step-score" id="js1">—</span></div>
+<div class="journey-arrow">→</div>
+<div class="journey-step j-convert"><span class="step-label">Stage 3</span><span class="step-name">Convert</span><span class="step-sub" id="jsub2">0/0 passed</span><span class="step-score" id="js2">—</span></div>
+</div>
+
+<div class="card">
+<h2>Overall Score</h2>
+<div class="score-display">
+<div class="score-big" id="overallScore">—</div>
+<div id="overallTier" style="display:none;"></div>
+</div>
+<div class="pbar"><div class="pfill" id="pFill" style="width:0%"></div></div>
+<div class="ptxt" id="pTxt">0 of 0 items scored</div>
+</div>
+<div id="auditSections"></div>
+</div>
+
+<div class="tc" id="tab-summary">
+<div class="card" id="summaryOverview"></div>
+<div id="summaryContent"></div>
+</div>
+
+<div class="tc" id="tab-actions">
+<div class="card">
+<h2>Action Items</h2>
+<p style="font-size:12px;color:#888;margin-bottom:14px;">Record issues and follow-ups. These export with your CSV.</p>
+<div class="actrow" style="font-weight:600;font-size:11px;text-transform:uppercase;color:#888;"><div>Issue / Action</div><div>Owner</div><div>Due Date</div><div></div></div>
+<div id="actionItems"></div>
+<button class="addbtn" onclick="addAction()">+ Add action item</button>
+</div>
+</div>
+
+<div class="tc" id="tab-photos">
+<div class="card">
+<h2>Photo Submission Guide</h2>
+<p style="font-size:12px;color:#888;margin-bottom:14px;">For remote audits (MY & TH), staff submit photos using this naming convention.</p>
+<table class="ptable">
+<thead><tr><th>What to Photograph</th><th>Naming Format</th><th>Example</th></tr></thead>
+<tbody>
+<tr><td>Storefront / window display</td><td><code>[Store]_Storefront_[YYYYMMDD]</code></td><td><code>SST_Storefront_20260318</code></td></tr>
+<tr><td>Full store interior</td><td><code>[Store]_Interior_[YYYYMMDD]</code></td><td><code>SCS_Interior_20260318</code></td></tr>
+<tr><td>Product wall / display</td><td><code>[Store]_ProductWall_[YYYYMMDD]</code></td><td><code>SST_ProductWall_20260318</code></td></tr>
+<tr><td>Home theater demo area</td><td><code>[Store]_DemoArea_[YYYYMMDD]</code></td><td><code>SFS_DemoArea_20260318</code></td></tr>
+<tr><td>Product tags close-up</td><td><code>[Store]_Tags_[YYYYMMDD]</code></td><td><code>Adelphi_Tags_20260318</code></td></tr>
+<tr><td>Promotional materials</td><td><code>[Store]_Promo_[YYYYMMDD]</code></td><td><code>SCS_Promo_20260318</code></td></tr>
+<tr><td>Screen content</td><td><code>[Store]_Screen_[YYYYMMDD]</code></td><td><code>SST_Screen_20260318</code></td></tr>
+<tr><td>Checkout area</td><td><code>[Store]_Checkout_[YYYYMMDD]</code></td><td><code>Adelphi_Checkout_20260318</code></td></tr>
+<tr><td>Issue found</td><td><code>[Store]_Issue_[Desc]_[YYYYMMDD]</code></td><td><code>SST_Issue_LightOut_20260318</code></td></tr>
+</tbody>
+</table>
+<p style="font-size:11px;color:#888;margin-top:14px;padding:8px 10px;background:#fafafa;border-radius:6px;"><strong>Store Codes:</strong> SFS (Wheelock) | Adelphi (Adelphi) | SCS (Starhill) | SST (EmSphere)</p>
+</div>
+</div>
+
+<div class="tc" id="tab-export">
+<div class="card">
+<h2>How to Use the Exports</h2>
+<div class="export-info">
+<strong>Two export options:</strong>
+<br><strong style="margin-top:8px;">1. Export Summary CSV</strong> — One row per audit with store, date, stage scores, overall score, tier. Paste into your master tracking sheet.
+<br><br><strong>2. Export Detail CSV</strong> — One row per item with pass/fail and comments. Use to find which items consistently fail.
+</div>
+</div>
+<div class="card">
+<h2>Google Sheet Column Headers</h2>
+<p style="font-size:13px;color:#555;margin-bottom:12px;">Set up your master tracking sheet with these headers:</p>
+<div style="background:#f8f8f8;padding:12px 16px;border-radius:8px;font-family:monospace;font-size:11px;overflow-x:auto;margin-bottom:16px;line-height:1.8">
+Store | Store Name | Date | Month | Week | Auditor | Type | Inspire (%) | Educate (%) | Convert (%) | Overall (%) | Tier | Items Passed | Total Items | Action Items
+</div>
+</div>
+</div>
+
+<div class="tc" id="tab-setup">
+<div class="card">
+<h2>Google Sheets Integration Setup</h2>
+<p style="font-size:13px;color:#555;margin-bottom:16px;">One-time setup to enable the "Send to Google Sheets" button. Takes about 5 minutes.</p>
+
+<div style="background:#E8F5E9;border:1px solid #C8E6C9;border-radius:8px;padding:16px;margin-bottom:20px;">
+<strong style="color:#2E7D32;">Step 1: Create your Google Sheet</strong>
+<p style="font-size:13px;color:#555;margin-top:4px;">Create a new Google Sheet and add these headers in Row 1:</p>
+<div style="background:#fff;padding:10px 14px;border-radius:6px;font-family:monospace;font-size:11px;margin-top:8px;overflow-x:auto;line-height:1.8">
+Timestamp | Store | Store Name | Date | Month | Week | Auditor | Type | Inspire (%) | Educate (%) | Convert (%) | Overall (%) | Tier | Items Passed | Total Items | Action Items | Failed Items
+</div>
+</div>
+
+<div style="background:#E3F2FD;border:1px solid #BBDEFB;border-radius:8px;padding:16px;margin-bottom:20px;">
+<strong style="color:#1565C0;">Step 2: Add the Apps Script</strong>
+<p style="font-size:13px;color:#555;margin-top:4px;">In your Google Sheet, go to <strong>Extensions → Apps Script</strong>. Delete any existing code, paste the code below, then click <strong>Save</strong>.</p>
+<div style="background:#fff;padding:12px 14px;border-radius:6px;font-family:monospace;font-size:11px;margin-top:8px;overflow-x:auto;white-space:pre;line-height:1.6;max-height:300px;overflow-y:auto" id="appsScriptCode">function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  sheet.appendRow([
+    new Date().toISOString(),
+    data.store,
+    data.storeName,
+    data.date,
+    data.month,
+    data.week,
+    data.auditor,
+    data.type,
+    data.inspire,
+    data.educate,
+    data.convert,
+    data.overall,
+    data.tier,
+    data.passed,
+    data.total,
+    data.actions,
+    data.failedItems
+  ]);
+  return ContentService
+    .createTextOutput(JSON.stringify({status: "success"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput("TC Audit endpoint is live.")
+    .setMimeType(ContentService.MimeType.TEXT);
+}</div>
+<button class="hbtn" style="margin-top:10px;background:#1565C0;color:#fff;font-size:12px;" onclick="copyScript()">Copy Script</button>
+</div>
+
+<div style="background:#FFF8E1;border:1px solid #FFF3CD;border-radius:8px;padding:16px;margin-bottom:20px;">
+<strong style="color:#F57F17;">Step 3: Deploy as Web App</strong>
+<ol style="font-size:13px;color:#555;margin-top:4px;padding-left:20px;line-height:2;">
+<li>In Apps Script, click <strong>Deploy → New deployment</strong></li>
+<li>Click the gear icon next to "Select type" → choose <strong>Web app</strong></li>
+<li>Set "Execute as" to <strong>Me</strong></li>
+<li>Set "Who has access" to <strong>Anyone</strong></li>
+<li>Click <strong>Deploy</strong> and <strong>Authorize access</strong> when prompted</li>
+<li>Copy the <strong>Web app URL</strong> (it starts with <code>https://script.google.com/macros/...</code>)</li>
+</ol>
+</div>
+
+<div style="background:#F3E5F5;border:1px solid #E1BEE7;border-radius:8px;padding:16px;margin-bottom:20px;">
+<strong style="color:#7B1FA2;">Step 4: Paste your Web App URL below</strong>
+<p style="font-size:13px;color:#555;margin-top:4px;">This is saved in your browser so you only need to do this once.</p>
+<div style="display:flex;gap:8px;margin-top:10px;">
+<input type="text" id="sheetsUrl" placeholder="Paste your Google Apps Script Web App URL here..." style="flex:1;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:inherit;" value="">
+<button class="hbtn" style="background:#7B1FA2;color:#fff;" onclick="saveUrl()">Save URL</button>
+</div>
+<div id="urlStatus" style="font-size:12px;margin-top:6px;color:#888;"></div>
+</div>
+
+<div style="background:#f8f8f8;border-radius:8px;padding:16px;">
+<strong>How it works after setup:</strong>
+<p style="font-size:13px;color:#555;margin-top:4px;">Complete the audit → Click "Send to Google Sheets" → Data automatically appears as a new row in your sheet. That's it. Your staff just need the HTML file and the URL saved — they never need to touch the Google Sheet directly.</p>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+// Google Sheets integration
+function getSheetUrl(){return localStorage.getItem("tc_audit_sheets_url")||""}
+function saveUrl(){const url=document.getElementById("sheetsUrl").value.trim();if(!url){document.getElementById("urlStatus").innerHTML='<span style="color:#dc3545;">Please paste a URL.</span>';return}localStorage.setItem("tc_audit_sheets_url",url);document.getElementById("urlStatus").innerHTML='<span style="color:#28a745;">✓ URL saved! The "Send to Google Sheets" button is now active.</span>'}
+function copyScript(){const code=document.getElementById("appsScriptCode").textContent;navigator.clipboard.writeText(code).then(()=>{showStatus("Apps Script code copied to clipboard!","success")}).catch(()=>{const range=document.createRange();range.selectNode(document.getElementById("appsScriptCode"));window.getSelection().removeAllRanges();window.getSelection().addRange(range);document.execCommand("copy");showStatus("Apps Script code copied!","success")})}
+
+function sendToSheets(){
+const url=getSheetUrl();
+if(!url){showStatus("Please set up your Google Sheets URL first — go to the Setup tab.","error");switchTab("setup");return}
+const store=document.getElementById("storeSelect").value;const date=document.getElementById("auditDate").value;
+if(!store||!date){showStatus("Please select a store and date first.","error");return}
+const st=store;const at=document.getElementById("auditType").value;
+let totalAll=0,passAll=0;const secPcts={};
+SEC.forEach(sec=>{let t=0,p=0;sec.items.forEach((it,ii)=>{if(!isApplicable(it,st,at))return;const k=sec.id+"-"+ii;if(manualNA[k])return;t++;if(checks[k])p++});secPcts[sec.id]=t>0?Math.round(p/t*100):null;totalAll+=t;passAll+=p});
+const ov=totalAll>0?Math.round(passAll/totalAll*100):null;const tier=getTier(ov);
+const actions=getActions();const actionStr=actions.map(a=>`${a.t} [${a.o}] (Due: ${a.d})`).join(" | ");
+// Gather failed items
+const failed=[];
+SEC.forEach((sec,si)=>{sec.items.forEach((it,ii)=>{if(!isApplicable(it,st,at))return;const k=sec.id+"-"+ii;if(manualNA[k])return;if(!checks[k])failed.push(`${si+1}.${ii+1} ${it.t}`)})});
+const data={store,storeName:SN[store]||"",date,month:document.getElementById("auditMonth").value,week:document.getElementById("weekNum").value,auditor:document.getElementById("auditorName").value,type:at,inspire:secPcts.inspire!=null?secPcts.inspire:"",educate:secPcts.educate!=null?secPcts.educate:"",convert:secPcts.convert!=null?secPcts.convert:"",overall:ov!=null?ov:"",tier:tier.l,passed:passAll,total:totalAll,actions:actionStr,failedItems:failed.join(" | ")};
+showStatus("Sending to Google Sheets...","info");
+fetch(url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}).then(()=>{showStatus("✓ Sent to Google Sheets! Check your spreadsheet.","success")}).catch(err=>{showStatus("Failed to send. Check your URL in Setup tab. Error: "+err.message,"error")})}
+
+const SEC=[
+{id:"inspire",name:"Inspire",badgeCls:"badge-inspire",sub:null,items:[
+{t:"Storefront / window display is clean, attractive, updated with current campaign",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Window decal and store logo are in good condition — no peeling or damage",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Store entrance is welcoming and unobstructed",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Floor is clean and free of debris, marks, or stains",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Walls and carpentry are clean, undamaged, free of scratches / stains",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Glass surfaces clean — windows, displays, doors",s:["SFS","Adelphi","SCS","SST"]},
+{t:"All lighting is functional — no burnt out / flickering lights",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Lighting ambiance correct — warm, premium feel",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Furniture and displays are in good condition — no chips, wear & tear",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Store layout maintained as designed — nothing moved out of position",s:["SFS","Adelphi","SCS","SST"]}
+]},
+{id:"educate",name:"Educate",badgeCls:"badge-educate",sub:[
+{label:"Product Display",start:0,count:7},
+{label:"Demo Experience",start:7,count:10}
+],items:[
+{t:"All Sonos products on display in correct, designated positions",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Marshall products displayed in designated area",s:["Adelphi"]},
+{t:"Bowers & Wilkins products displayed in designated area",s:["Adelphi","SCS"]},
+{t:"All display products clean — no dust, fingerprints, stains",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Cable management tidy — cables hidden or neatly packed",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Display accessories (trays, stands, decor) in good condition",s:["SFS","Adelphi","SCS","SST"]},
+{t:"All display products powered on, connected, functional",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Home theatre demo (9.1.4) system is optimised and ready for demo",s:["SFS","Adelphi","SCS","SST"]},
+{t:"All speakers are set up and ready for demo",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Demo content / music playlist is updated to the latest curation",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Wi-Fi connectivity is stable — no drop-offs during demos",s:["SFS","Adelphi","SCS","SST"]},
+{t:"TV / display screens playing the updated video content",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Multi-room demo is set up and ready for demo",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Sonos app is set up on the iPad and working",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Demo area is clean, tidy, inviting — carpentry & furniture are in good condition",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Marshall demos are set up and ready for demo",s:["Adelphi"]},
+{t:"Bowers & Wilkins headphone / earphone demos are clean and in good condition",s:["Adelphi","SCS"]}
+]},
+{id:"convert",name:"Convert",badgeCls:"badge-convert",sub:null,items:[
+{t:"Product pricing visible & accurate",s:["SFS","Adelphi","SCS","SST"]},
+{t:"All product tags present, accurate, properly positioned",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Promotional materials (standees, flyers, posters) are updated",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Storage room is organized and tidy",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Checkout / payment area is clean and organized",s:["SFS","Adelphi","SCS","SST"]},
+{t:"TC bags are available",s:["SFS","Adelphi","SCS","SST"]},
+{t:"Staff appearance is presentable",s:["SFS","Adelphi","SCS","SST"],ipo:true}
+]}];
+
+const SN={SFS:"Sonos Flagship @ Wheelock",Adelphi:"TC Acoustic @ Adelphi",SCS:"Sonos Concept @ Starhill",SST:"Sonos Store Thailand @ EmSphere"};
+const STAFF={SFS:["Jeremy","Macus","Reuben"],Adelphi:["Shanny","Zi Hao"],SCS:["Timothy","Franco","Josiah"],SST:["Pear","Muffin","Macus","Jeremy","Nam"]};
+
+let checks={};// key: secId-itemIdx, value: true (pass)
+let manualNA={};// key: secId-itemIdx, value: true (manually marked N/A)
+let itemComments={};// key: secId-itemIdx, value: string
+
+// Improvement suggestions for each criteria
+const TIPS={
+"inspire-0":"Update the window display with the latest campaign visuals. Schedule a monthly window refresh aligned with marketing calendar. Take reference photos of the ideal setup for consistency.",
+"inspire-1":"Inspect decals and logo for wear — peel and replace damaged ones. Order spare decals to keep in the stockroom. Include a monthly decal check in the opening routine.",
+"inspire-2":"Remove any obstructions (boxes, signage stands, stock) from the entrance path. The entrance should feel open and inviting within the first 3 seconds of a shopper approaching.",
+"inspire-3":"Sweep and mop floors at opening and midday. Spot-clean any marks immediately. For persistent stains, escalate to building management or schedule professional cleaning.",
+"inspire-4":"Wipe down walls and carpentry weekly. Report scratches or damage to the maintenance log immediately — small issues become eyesores fast. Keep a touch-up kit in the stockroom.",
+"inspire-5":"Clean all glass surfaces at store opening daily. Use streak-free glass cleaner. Assign this to the opening shift as a non-negotiable daily task.",
+"inspire-6":"Check all lights at store opening. Report burnt-out or flickering bulbs immediately and track replacement in the maintenance log. Keep spare bulbs in stock for quick fixes.",
+"inspire-7":"Review the overall ambiance — are spotlights aimed correctly? Is the warmth level right? Adjust dimmer settings if available. Harsh or cold lighting kills the premium feel.",
+"inspire-8":"Inspect furniture and fixtures weekly for chips, wobbles, or wear. Tighten loose screws, touch up minor damage. Escalate anything that affects the shopper's perception of quality.",
+"inspire-9":"Walk the store at opening and compare against the approved floor plan. If anything has shifted (products, furniture, displays), reset it. Take a reference photo of the correct layout.",
+"educate-0":"Cross-check displayed products against the current Sonos planogram. Every product should be in its designated spot. If a product is missing, place a clean placeholder or 'Coming Soon' card.",
+"educate-1":"Ensure Marshall products are displayed per the agreed planogram. Check that all demo units are powered on and the area is clearly branded.",
+"educate-2":"Ensure Bowers & Wilkins products are in their designated area with proper branding. Headphone demos should be hygienic and accessible.",
+"educate-3":"Wipe all display products with a microfiber cloth daily — tops, sides, and bases. Fingerprints on dark speakers (like Sonos or Marshall) are highly visible. Make this a daily opening task.",
+"educate-4":"Route cables behind furniture or through cable channels. Use cable ties or velcro straps. No cables should be visible from the shopper's vantage point. Check weekly as cables shift over time.",
+"educate-5":"Inspect stands, trays, and decor items weekly. Replace anything chipped or faded. These details signal whether the store is cared for — shoppers notice.",
+"educate-6":"Test every display product at opening. If a product isn't powering on, troubleshoot the connection or swap it. A dead product on display is worse than an empty spot.",
+"educate-7":"Run the full 9.1.4 demo before store opens. Check that all channels are playing, surrounds are balanced, and the Atmos effect is noticeable. Recalibrate if the sound feels off.",
+"educate-8":"Test every speaker in the demo chain. If any speaker is disconnected, reconnect and test. Label cables behind the setup to make troubleshooting faster.",
+"educate-9":"Check that the playlist is the latest curated version. Update monthly or when new playlists are released. Use a mix of genres that showcase the system's range — bass, vocals, spatial audio.",
+"educate-10":"Run a speed test on the store Wi-Fi. If speeds are below 20Mbps or connectivity drops during demo, escalate to IT. A failed Wi-Fi demo reflects poorly on the Sonos ecosystem.",
+"educate-11":"Verify all screens are showing the correct, current content. Update any expired or seasonal content. Screens showing the wrong content or a loading screen create a bad impression.",
+"educate-12":"Test the multi-room demo by playing music across zones. Ensure transitions are smooth and volume is balanced. This demo is key to upselling — it must work flawlessly.",
+"educate-13":"Ensure the Sonos app is logged in, connected, and showing all products. Test basic functions (play, pause, group, volume). Update the app if a new version is available.",
+"educate-14":"Clean the demo area daily — vacuum carpets, wipe surfaces, fluff cushions. Inspect carpentry for damage. The demo area is where shoppers sit and experience the product — it must feel premium.",
+"educate-15":"Set up all Marshall demo units and test them. Ensure volume levels are appropriate and the branded area looks intentional, not cluttered.",
+"educate-16":"Clean headphone earcups and earphone tips with antibacterial wipes daily. Replace worn ear pads. Shoppers are hesitant to try headphones that look used or unhygienic.",
+"convert-0":"Check that every product has a visible, accurate price tag or digital price display. Cross-reference with the current price list. Outdated pricing erodes trust.",
+"convert-1":"Walk the store and check every product tag. Replace missing, damaged, or outdated tags. Tags are your silent salesperson when staff are busy with other customers.",
+"convert-2":"Remove any expired promotional materials immediately. Replace with current campaign collateral. If no new materials are available, clean displays are better than outdated ones.",
+"convert-3":"Organize the storage room — group by category, label shelves, clear walkways. A tidy stockroom means faster restocking and better stock awareness. Schedule a weekly tidy-up.",
+"convert-4":"Clear the checkout area of clutter (personal items, paperwork, boxes). Ensure payment terminal is visible and accessible. The last impression matters as much as the first.",
+"convert-5":"Check TC bag stock weekly. Reorder before running low. A branded bag is the last touchpoint — handing a product in a generic bag diminishes the experience.",
+"convert-6":"Ensure all staff are dressed presentably and consistently. If there's a dress code or uniform, enforce it. Staff appearance is part of the brand experience."
+};
+
+function getTier(p){if(p==null)return{l:"—",c:""};if(p>=90)return{l:"GOLD",c:"tier-gold"};if(p>=80)return{l:"A",c:"tier-a"};if(p>=70)return{l:"B",c:"tier-b"};if(p>=60)return{l:"C",c:"tier-c"};return{l:"FAIL",c:"tier-fail"}}
+function getCol(p){if(p==null)return"#999";if(p>=90)return"#856404";if(p>=80)return"#155724";if(p>=70)return"#0C5460";if(p>=60)return"#8B4513";return"#721C24"}
+function isApplicable(item,store,at){if(store&&!item.s.includes(store))return false;if(item.ipo&&at==="remote")return false;return true}
+
+function recalc(){
+const st=document.getElementById("storeSelect").value;
+const at=document.getElementById("auditType").value;
+let totalAll=0,passAll=0;
+SEC.forEach((sec,si)=>{
+let total=0,pass=0;
+sec.items.forEach((it,ii)=>{
+if(!isApplicable(it,st,at))return;
+const k=sec.id+"-"+ii;
+if(manualNA[k])return;
+total++;
+if(checks[k])pass++;
+});
+const pct=total>0?Math.round(pass/total*100):null;
+const jEl=document.getElementById("js"+si);if(jEl)jEl.textContent=pct!=null?pct+"%":"—";
+const jSub=document.getElementById("jsub"+si);if(jSub)jSub.textContent=`${pass}/${total} passed`;
+const spEl=document.getElementById("sp"+si);if(spEl){spEl.textContent=pct!=null?pct+"%":"—";spEl.style.color=pct!=null?getCol(pct):"#999"}
+const pcEl=document.getElementById("pc"+si);if(pcEl)pcEl.textContent=`${pass}/${total}`;
+totalAll+=total;passAll+=pass;
+});
+const ov=totalAll>0?Math.round(passAll/totalAll*100):null;
+document.getElementById("overallScore").textContent=ov!=null?ov+"%":"—";
+document.getElementById("overallScore").style.color=ov!=null?getCol(ov):"#1b1b1b";
+const te=document.getElementById("overallTier");
+if(ov!=null){const t=getTier(ov);te.textContent=t.l;te.className="score-tier "+t.c;te.style.display="inline-block"}else te.style.display="none";
+document.getElementById("pFill").style.width=totalAll>0?(passAll/totalAll*100)+"%":"0%";
+document.getElementById("pTxt").textContent=`${passAll} of ${totalAll} items passed`;
+}
+
+function render(){
+const st=document.getElementById("storeSelect").value;
+const at=document.getElementById("auditType").value;
+const c=document.getElementById("auditSections");c.innerHTML="";
+SEC.forEach((sec,si)=>{
+const ap=sec.items.filter(it=>isApplicable(it,st,at)).length;
+const d=document.createElement("div");d.className="asec";
+let itemsHtml="";
+const renderItem=(ii)=>{
+const it=sec.items[ii];const na=!isApplicable(it,st,at);
+const k=sec.id+"-"+ii;
+const isNA=manualNA[k];
+const checked=checks[k]?"checked":"";
+const cmt=itemComments[k]||"";
+let tags="";
+if(it.s.length<4)tags+=`<span class="iapp">Applies to: ${it.s.join(", ")}</span>`;
+if(it.ipo)tags+=` <span class="itag">In-person only</span>`;
+if(na){
+return`<div class="aitem" style="opacity:.35;"><div class="aitem-top"><div class="aitem-chk"><span class="na-label">N/A</span></div><div><div class="itxt"><span class="inum">${si+1}.${ii+1}</span> ${it.t}</div>${tags}</div></div></div>`;
+}
+if(isNA){
+return`<div class="aitem" style="opacity:.5;"><div class="aitem-top"><div class="aitem-chk"><span class="na-label">N/A</span></div><div style="flex:1;"><div class="itxt"><span class="inum">${si+1}.${ii+1}</span> ${it.t}</div>${tags}</div><button class="na-undo" onclick="toggleNA('${sec.id}',${ii})" title="Undo N/A">Undo</button></div><div class="aitem-comment"><input type="text" placeholder="Reason for N/A..." value="${cmt.replace(/"/g,'&quot;')}" onchange="setComment('${sec.id}',${ii},this.value)"></div></div>`;
+}
+return`<div class="aitem"><div class="aitem-top"><div class="aitem-chk"><input type="checkbox" ${checked} onchange="toggleChk('${sec.id}',${ii},this.checked)"></div><div style="flex:1;"><div class="itxt"><span class="inum">${si+1}.${ii+1}</span> ${it.t}</div>${tags}</div><button class="na-btn" onclick="toggleNA('${sec.id}',${ii})" title="Mark as N/A">N/A</button></div><div class="aitem-comment"><input type="text" placeholder="Add comment / feedback..." value="${cmt.replace(/"/g,'&quot;')}" onchange="setComment('${sec.id}',${ii},this.value)"></div></div>`;
+};
+if(sec.sub){sec.sub.forEach(sub=>{itemsHtml+=`<div class="subsec-label">${sub.label}</div>`;for(let i=sub.start;i<sub.start+sub.count&&i<sec.items.length;i++)itemsHtml+=renderItem(i)})}
+else{sec.items.forEach((it,ii)=>{itemsHtml+=renderItem(ii)})}
+d.innerHTML=`<div class="asec-hd" onclick="toggle(${si})"><div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;"><h3>${sec.name}</h3><span class="badge ${sec.badgeCls}">${ap} items</span></div><div style="display:flex;align-items:center;gap:8px;"><span class="pass-count" id="pc${si}">0/${ap}</span><span class="spct" id="sp${si}">—</span><span class="arw" id="aw${si}">▼</span></div></div><div class="asec-bd" id="sb${si}">${itemsHtml}</div>`;
+c.appendChild(d)});
+}
+
+function toggle(i){document.getElementById("sb"+i).classList.toggle("open");document.getElementById("aw"+i).classList.toggle("open")}
+function toggleChk(sid,ii,val){const k=sid+"-"+ii;if(val)checks[k]=true;else delete checks[k];recalc();
+const si=SEC.findIndex(s=>s.id===sid);
+const st=document.getElementById("storeSelect").value;const at=document.getElementById("auditType").value;
+let t=0,p=0;SEC[si].items.forEach((it,i)=>{if(!isApplicable(it,st,at))return;const ik=sid+"-"+i;if(manualNA[ik])return;t++;if(checks[ik])p++});
+const pcEl=document.getElementById("pc"+si);if(pcEl)pcEl.textContent=`${p}/${t}`;
+}
+function setComment(sid,ii,val){itemComments[sid+"-"+ii]=val}
+function toggleNA(sid,ii){const k=sid+"-"+ii;if(manualNA[k]){delete manualNA[k]}else{manualNA[k]=true;delete checks[k]}const si=SEC.findIndex(s=>s.id===sid);render();recalc();document.getElementById("sb"+si).classList.add("open");document.getElementById("aw"+si).classList.add("open")}
+function onStoreChange(){const s=document.getElementById("storeSelect").value;document.getElementById("auditType").value=(s==="SCS"||s==="SST")?"remote":"in-person";render();recalc();refreshActionOwners()}
+
+// Actions
+function getStaffOpts(){const st=document.getElementById("storeSelect").value;return st&&STAFF[st]?STAFF[st]:Object.values(STAFF).flat().filter((v,i,a)=>a.indexOf(v)===i).sort()}
+function addAction(t,o,d){const c=document.getElementById("actionItems");const r=document.createElement("div");r.className="actrow";const opts=getStaffOpts();const optHtml='<option value="">— Assign to —</option>'+opts.map(s=>`<option value="${s}"${o===s?" selected":""}>${s}</option>`).join("");r.innerHTML=`<input type="text" placeholder="Describe issue or action" value="${t||""}"><select class="act-owner">${optHtml}</select><input type="date" value="${d||""}"><button class="rmbtn" onclick="this.parentElement.remove()">✕</button>`;c.appendChild(r)}
+function refreshActionOwners(){document.querySelectorAll("#actionItems .act-owner").forEach(sel=>{const cur=sel.value;const opts=getStaffOpts();sel.innerHTML='<option value="">— Assign to —</option>'+opts.map(s=>`<option value="${s}"${cur===s?" selected":""}>${s}</option>`).join("")})}
+function getActions(){const rows=document.querySelectorAll("#actionItems .actrow");const a=[];rows.forEach(r=>{const txt=r.querySelector("input[type=text]");const sel=r.querySelector("select");const dt=r.querySelector("input[type=date]");if(txt&&txt.value.trim())a.push({t:txt.value,o:sel?sel.value:"",d:dt?dt.value:""})});return a}
+
+// CSV
+function esc(v){v=String(v||"");if(v.includes(",")||v.includes('"')||v.includes("\n"))return'"'+v.replace(/"/g,'""')+'"';return v}
+
+function exportCSV(){
+const store=document.getElementById("storeSelect").value;const date=document.getElementById("auditDate").value;
+if(!store||!date){showStatus("Please select a store and date first.","error");return}
+const st=store;const at=document.getElementById("auditType").value;
+let totalAll=0,passAll=0;const secPcts={};
+SEC.forEach(sec=>{let t=0,p=0;sec.items.forEach((it,ii)=>{if(!isApplicable(it,st,at))return;const k=sec.id+"-"+ii;if(manualNA[k])return;t++;if(checks[k])p++});secPcts[sec.id]=t>0?Math.round(p/t*100):null;totalAll+=t;passAll+=p});
+const ov=totalAll>0?Math.round(passAll/totalAll*100):null;const tier=getTier(ov);
+const actions=getActions();const actionStr=actions.map(a=>`${a.t} [${a.o}] (Due: ${a.d})`).join(" | ");
+const headers=["Store","Store Name","Date","Month","Week","Auditor","Type","Inspire (%)","Educate (%)","Convert (%)","Overall (%)","Tier","Items Passed","Total Items","Action Items"];
+const row=[store,SN[store]||"",date,document.getElementById("auditMonth").value,document.getElementById("weekNum").value,document.getElementById("auditorName").value,at,secPcts.inspire!=null?secPcts.inspire:"",secPcts.educate!=null?secPcts.educate:"",secPcts.convert!=null?secPcts.convert:"",ov!=null?ov:"",tier.l,passAll,totalAll,actionStr];
+download(headers.map(esc).join(",")+"\n"+row.map(esc).join(","),`TC_Audit_${store}_${date}.csv`);
+showStatus("Summary CSV exported!","success")}
+
+function exportDetailCSV(){
+const store=document.getElementById("storeSelect").value;const date=document.getElementById("auditDate").value;
+if(!store||!date){showStatus("Please select a store and date first.","error");return}
+const at=document.getElementById("auditType").value;
+const headers=["Store","Date","Auditor","Stage","Sub-section","Item #","Item Description","Pass","Applicable","Comment"];
+const rows=[headers.map(esc).join(",")];
+SEC.forEach((sec,si)=>{
+let currentSub="";
+sec.items.forEach((it,ii)=>{
+if(sec.sub){const sub=sec.sub.find(s=>ii>=s.start&&ii<s.start+s.count);if(sub)currentSub=sub.label}
+const autoNA=!isApplicable(it,store,at);const k=sec.id+"-"+ii;
+const isNA=autoNA||manualNA[k];
+const passVal=isNA?"N/A":checks[k]?"Yes":"No";
+const cmt=itemComments[k]||"";
+rows.push([store,date,document.getElementById("auditorName").value,sec.name,currentSub,`${si+1}.${ii+1}`,it.t,passVal,isNA?"No":"Yes",cmt].map(esc).join(","))})});
+download(rows.join("\n"),`TC_Audit_Detail_${store}_${date}.csv`);
+showStatus("Detail CSV exported!","success")}
+
+function download(content,filename){const blob=new Blob(["\ufeff"+content],{type:"text/csv;charset=utf-8;"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url)}
+
+function switchTab(tab){document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));document.querySelectorAll(".tc").forEach(t=>t.classList.remove("active"));document.getElementById("tab-"+tab).classList.add("active");document.querySelectorAll(".tab").forEach(t=>{if(t.dataset.tab===tab)t.classList.add("active")});if(tab==="summary")renderSummary()}
+
+function renderSummary(){
+const st=document.getElementById("storeSelect").value;
+const at=document.getElementById("auditType").value;
+const overview=document.getElementById("summaryOverview");
+const content=document.getElementById("summaryContent");
+
+// Gather failed items
+const failed=[];
+let totalApplicable=0,totalPassed=0;
+SEC.forEach((sec,si)=>{
+let currentSub="";
+sec.items.forEach((it,ii)=>{
+if(!isApplicable(it,st,at))return;
+const k=sec.id+"-"+ii;
+if(manualNA[k])return;
+totalApplicable++;
+if(checks[k]){totalPassed++;return}
+if(sec.sub){const sub=sec.sub.find(s=>ii>=s.start&&ii<s.start+s.count);if(sub)currentSub=sub.label}
+failed.push({sec:sec.id,secName:sec.name,sub:currentSub,si,ii,text:it.t,num:`${si+1}.${ii+1}`,comment:itemComments[k]||"",tip:TIPS[sec.id+"-"+ii]||""});
+})});
+
+const ov=totalApplicable>0?Math.round(totalPassed/totalApplicable*100):null;
+const tier=getTier(ov);
+
+// Overview card
+if(!st){overview.innerHTML='<div class="sum-no-data"><span class="icon">\u2139\uFE0F</span><p>Select a store and complete the scorecard to see your summary.</p></div>';content.innerHTML="";return}
+
+if(failed.length===0){
+overview.innerHTML=`<div class="sum-all-clear"><span class="icon">\u2705</span><h3>All items passed!</h3><p>${totalPassed}/${totalApplicable} items \u2014 ${ov}% (${tier.l})</p></div>`;
+content.innerHTML="";return}
+
+overview.innerHTML=`<h2>Audit Summary</h2>
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+<div><span style="font-size:32px;font-weight:700;color:${getCol(ov)}">${ov}%</span> <span class="score-tier ${tier.c}" style="font-size:14px;padding:3px 12px;">${tier.l}</span></div>
+<div style="font-size:13px;color:#888;">${totalPassed}/${totalApplicable} passed &nbsp;\u00b7&nbsp; <strong style="color:#dc3545;">${failed.length} item${failed.length!==1?"s":""} need attention</strong></div>
+</div>`;
+
+// Group by section
+let html="";
+const grouped={};
+failed.forEach(f=>{if(!grouped[f.sec])grouped[f.sec]=[];grouped[f.sec].push(f)});
+
+SEC.forEach(sec=>{
+if(!grouped[sec.id])return;
+const items=grouped[sec.id];
+const stageCls=sec.id;
+html+=`<div class="card"><div class="sum-stage-hd ${stageCls}">${sec.name} \u2014 ${items.length} item${items.length!==1?"s":""} to address</div>`;
+items.forEach(f=>{
+html+=`<div class="sum-item">
+<div class="sum-item-hd"><div><span class="sum-item-num">${f.num}</span> <span class="sum-item-text">${f.text}</span></div></div>
+${f.comment?`<div class="sum-item-comment">\u201C${f.comment}\u201D</div>`:""}
+${f.tip?`<div class="sum-suggestion"><strong>How to fix:</strong><br>${f.tip}</div>`:""}
+</div>`;
+});
+html+="</div>"});
+content.innerHTML=html;
+}
+function showStatus(msg,type){const el=document.getElementById("statusBar");el.textContent=msg;el.className="status-bar status-"+type;setTimeout(()=>{el.className="status-bar"},4000)}
+function resetAll(){if(!confirm("Reset all scores, comments, and actions?"))return;checks={};manualNA={};itemComments={};document.getElementById("storeSelect").value="";document.getElementById("auditDate").valueAsDate=new Date();document.getElementById("auditMonth").value="";document.getElementById("auditorName").value="";document.getElementById("weekNum").value="";document.getElementById("actionItems").innerHTML="";addAction();addAction();addAction();render();recalc();switchTab("scorecard");showStatus("Scorecard reset.","info")}
+
+document.getElementById("auditDate").valueAsDate=new Date();render();recalc();addAction();addAction();addAction();
+// Load saved Sheets URL
+const savedUrl=getSheetUrl();if(savedUrl){document.getElementById("sheetsUrl").value=savedUrl;document.getElementById("urlStatus").innerHTML='<span style="color:#28a745;">\u2713 URL saved and active.</span>'}
+</script>
+</body>
+</html>
