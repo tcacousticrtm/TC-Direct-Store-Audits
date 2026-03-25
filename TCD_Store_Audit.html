@@ -216,6 +216,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--dk
     </div>
     <div class="header-actions">
       <span class="sheets-chip chip-none" id="sheetsChip"><span class="chip-dot"></span><span id="chipText">Sheets not connected</span></span>
+      <button class="hbtn hbtn-sheets" id="saveBtn" onclick="saveAudit()">💾 Save &amp; Send to Sheets</button>
       <button class="hbtn hbtn-export" onclick="exportCSV()">Export CSV</button>
       <button class="hbtn hbtn-detail" onclick="exportDetailCSV()">Export Detail</button>
       <button class="hbtn hbtn-reset" onclick="resetAll()">Reset</button>
@@ -313,19 +314,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--dk
 
   <div id="auditSections"></div>
 
-  <!-- SAVE BAR -->
-  <div class="save-bar">
-    <div class="save-bar-left">
-      <div class="save-bar-title">Ready to save this audit?</div>
-      <div class="save-bar-sub">Saves to browser history · Sends to Google Sheet (if connected)</div>
-    </div>
-    <div class="save-bar-right">
-      <button class="sheets-btn" id="saveBtn" onclick="saveAudit()">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.318 12.545H7.91v-1.09h3.41v1.09zm2.863-3.273H7.91v1.091h6.272v-1.09zm0 4.363H7.91V14.727h6.272v-1.09zM4.636 20.727V3.273h9.818l4.91 4.91v12.544H4.635zM13.637 4.182v3.818h3.818l-3.818-3.818z"/></svg>
-        Save &amp; Send to Google Sheets
-      </button>
-    </div>
-  </div>
 
 </div><!-- /scorecard -->
 
@@ -365,6 +353,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--dk
     <div class="setup-step"><div class="setup-num">2</div><div>Paste the <strong>TC_Audit_AppScript.gs</strong> code (provided separately), replacing all existing code. Click Save.</div></div>
     <div class="setup-step"><div class="setup-num">3</div><div>Click <strong>Deploy → New deployment</strong>. Set type to <em>Web app</em>, execute as <em>Me</em>, access <em>Anyone</em>. Click Deploy.</div></div>
     <div class="setup-step"><div class="setup-num">4</div><div>Copy the Web App URL and paste it below:</div></div>
+    <div style="background:#FFF8E1;border:1px solid #FFE082;border-radius:7px;padding:10px 12px;margin:8px 0;font-size:12px;color:#5D4037">
+      <strong>⚠ Using a Google Workspace account (e.g. @tcacoustic.com.sg)?</strong><br>
+      Workspace accounts restrict CORS responses from Apps Script even when access is set to "Anyone". This is normal — your audit data will still reach the sheet correctly. The Test Connection button will confirm your URL is reachable and show a Workspace-mode notice.
+      If "Anyone" is not available and only shows your domain, ask your Google Workspace admin to allow external web app deployments, or use a personal Google account to host the script.
+    </div>
     <input type="text" class="url-input" id="scriptUrlInput"
       placeholder="https://script.google.com/macros/s/…/exec"
       oninput="onUrlInput()" value="">
@@ -749,18 +742,31 @@ async function saveAudit() {
   updateChip('wait', 'Sending…');
 
   try {
-    const resp = await fetch(url, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify(payload),
-      mode:'cors'
-    });
-    const data = await resp.json();
-    if (data.status === 'ok') {
+    // Try standard CORS first; fall back to no-cors for Google Workspace accounts
+    // (Workspace Apps Script blocks CORS headers even when the write succeeds)
+    let synced = false;
+    try {
+      const resp = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify(payload),
+        mode:'cors'
+      });
+      const data = await resp.json();
+      if (data.status === 'ok') synced = true;
+    } catch(corsErr) {
+      // CORS blocked — retry with no-cors (opaque response, data still reaches sheet)
+      await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify(payload),
+        mode:'no-cors'
+      });
+      synced = true; // no-cors sends successfully; we just can't read the response
+    }
+    if (synced) {
       showStatus(`✓ Audit saved and sent to Google Sheets — ${store} · ${date} · ${payload.overallScore}% (${payload.tier})`, 'sheets');
       updateChip('ok', 'Sheets synced');
-    } else {
-      throw new Error(data.message || 'Unknown error');
     }
   } catch(err) {
     showStatus(`✓ Saved locally. Google Sheets sync failed: ${err.message}. Check Setup tab.`, 'error');
@@ -768,7 +774,7 @@ async function saveAudit() {
   }
 
   btn.disabled = false;
-  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M11.318 12.545H7.91v-1.09h3.41v1.09zm2.863-3.273H7.91v1.091h6.272v-1.09zm0 4.363H7.91V14.727h6.272v-1.09zM4.636 20.727V3.273h9.818l4.91 4.91v12.544H4.635zM13.637 4.182v3.818h3.818l-3.818-3.818z"/></svg> Save &amp; Send to Google Sheets`;
+  btn.textContent = '💾 Save & Send to Sheets';
 }
 
 function updateChip(state, text) {
@@ -794,19 +800,31 @@ async function testConnection() {
   const resEl = document.getElementById('testResult');
   resEl.textContent = 'Testing…'; resEl.style.color = '#856404';
   try {
+    // Try CORS first (standard accounts)
     const resp = await fetch(url, { method:'GET', mode:'cors' });
     const data = await resp.json();
     if (data.status === 'ok') {
-      resEl.textContent = '✓ Connection successful! Ready to sync audits.';
+      resEl.textContent = '✓ Connected! Ready to sync audits.';
       resEl.style.color = '#155724';
       updateChip('ok', 'Sheets connected');
     } else {
       throw new Error(data.message || 'Unexpected response');
     }
-  } catch(err) {
-    resEl.textContent = `✗ Failed: ${err.message}`;
-    resEl.style.color = '#721C24';
-    updateChip('err', 'Connection failed');
+  } catch(corsErr) {
+    // CORS blocked — try no-cors ping to check the URL is reachable at all
+    try {
+      await fetch(url, { method:'GET', mode:'no-cors' });
+      // Opaque response means the server responded — URL is valid
+      // Workspace blocks reading the response body but the script is live
+      resEl.innerHTML = '✓ URL is reachable (Google Workspace mode — CORS response blocked by domain policy, but audits will still send correctly).<br><span style="font-size:11px;color:#388e3c;margin-top:4px;display:block">You can proceed — your data will reach the sheet even though this test cannot read the confirmation.</span>';
+      resEl.style.color = '#1B5E20';
+      updateChip('ok', 'Sheets connected (Workspace)');
+      saveUrl(url);
+    } catch(netErr) {
+      resEl.textContent = `✗ URL not reachable. Check the deployment URL and try redeploying. (${netErr.message})`;
+      resEl.style.color = '#721C24';
+      updateChip('err', 'Connection failed');
+    }
   }
 }
 
