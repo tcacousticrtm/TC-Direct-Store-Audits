@@ -742,52 +742,9 @@ async function saveAudit() {
   updateChip('wait', 'Sending…');
 
   try {
-    // Apps Script POST bodies are dropped during the 302 redirect.
-    // Solution: send summary fields as a GET request with URL-encoded JSON.
-    // Items detail is sent as a separate chunked GET to stay under URL length limits.
-
-    // Build summary payload (no items — kept small for URL encoding)
-    const summaryPayload = {
-      type: 'summary',
-      store:         payload.store,
-      storeName:     payload.storeName,
-      date:          payload.date,
-      month:         payload.month,
-      auditor:       payload.auditor,
-      auditType:     payload.auditType,
-      prevScore:     payload.prevScore,
-      inspireScore:  payload.inspireScore,
-      educateScore:  payload.educateScore,
-      convertScore:  payload.convertScore,
-      overallScore:  payload.overallScore,
-      tier:          payload.tier,
-      passed:        payload.passed,
-      total:         payload.total,
-      openActions:   payload.openActions,
-      notes:         payload.notes
-    };
-
-    // Send summary row via GET
-    const summaryUrl = url + '?data=' + encodeURIComponent(JSON.stringify(summaryPayload));
-    await fetch(summaryUrl, { method: 'GET', mode: 'no-cors' });
-
-    // Send detail items in chunks of 5 via GET
-    const items = payload.items || [];
-    const chunkSize = 5;
-    for (let i = 0; i < items.length; i += chunkSize) {
-      const chunkPayload = {
-        type: 'detail',
-        store:   payload.store,
-        date:    payload.date,
-        auditor: payload.auditor,
-        items:   items.slice(i, i + chunkSize)
-      };
-      const chunkUrl = url + '?data=' + encodeURIComponent(JSON.stringify(chunkPayload));
-      await fetch(chunkUrl, { method: 'GET', mode: 'no-cors' });
-    }
-
-    // Wait briefly for sheets to write, then confirm
-    await new Promise(r => setTimeout(r, 1500));
+    // Use hidden iframe form submission — the only method that reliably follows
+    // Apps Script's 302 redirect without dropping data or hitting CORS issues.
+    await submitViaForm(url, payload);
     showStatus(`✓ Audit sent to Google Sheets — ${store} · ${date} · ${payload.overallScore}% (${payload.tier})`, 'sheets');
     updateChip('ok', 'Sheets synced');
   } catch(err) {
@@ -798,6 +755,52 @@ async function saveAudit() {
   btn.disabled = false;
   btn.textContent = '💾 Save & Send to Sheets';
 }
+
+// ── FORM SUBMISSION ─────────────────────────────────────────────────
+// Hidden iframe + form is the only method that reliably handles Apps Script's
+// 302 redirect without CORS errors or dropped POST bodies.
+function submitViaForm(url, payload) {
+  return new Promise((resolve, reject) => {
+    // Create a hidden iframe to absorb the response
+    const iframe = document.createElement('iframe');
+    iframe.name   = 'audit_submit_frame';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    // Create a hidden form targeting the iframe
+    const form   = document.createElement('form');
+    form.method  = 'POST';
+    form.action  = url;
+    form.target  = 'audit_submit_frame';
+    form.style.display = 'none';
+
+    // Apps Script reads request.getParameter('payload')
+    const input  = document.createElement('input');
+    input.type   = 'hidden';
+    input.name   = 'payload';
+    input.value  = JSON.stringify(payload);
+    form.appendChild(input);
+    document.body.appendChild(form);
+
+    // Submit — resolve after 3s (we can't read the iframe response cross-origin)
+    iframe.onload = () => {
+      setTimeout(() => {
+        document.body.removeChild(form);
+        document.body.removeChild(iframe);
+        resolve();
+      }, 500);
+    };
+
+    // Fallback resolve after 5s in case onload doesn't fire
+    setTimeout(() => {
+      try { document.body.removeChild(form); document.body.removeChild(iframe); } catch(e) {}
+      resolve();
+    }, 5000);
+
+    form.submit();
+  });
+}
+
 
 function updateChip(state, text) {
   const chip = document.getElementById('sheetsChip');
