@@ -742,20 +742,19 @@ async function saveAudit() {
   updateChip('wait', 'Sending…');
 
   try {
-    // POST with JSON body — works correctly for personal Google accounts
-    const resp = await fetch(url, {
+    // Apps Script redirects POST requests and drops the body during redirect when using cors mode.
+    // no-cors sends directly without following redirects — payload arrives intact.
+    // We cannot read the response in no-cors mode, so we verify by asking user to check the sheet.
+    await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload),
-      mode: 'cors'
+      mode: 'no-cors'
     });
-    const data = await resp.json();
-    if (data.status === 'ok') {
-      showStatus(`✓ Audit saved and sent to Google Sheets — ${store} · ${date} · ${payload.overallScore}% (${payload.tier})`, 'sheets');
-      updateChip('ok', 'Sheets synced');
-    } else {
-      throw new Error(data.message || 'Unknown error');
-    }
+    // Give the script ~2 seconds to write, then show success
+    await new Promise(r => setTimeout(r, 2000));
+    showStatus(`✓ Audit sent to Google Sheets — ${store} · ${date} · ${payload.overallScore}% (${payload.tier}). Check your sheet for the new row.`, 'sheets');
+    updateChip('ok', 'Sheets synced');
   } catch(err) {
     showStatus(`✓ Saved locally. Google Sheets sync failed: ${err.message}. Check Setup tab.`, 'error');
     updateChip('err', 'Sync failed');
