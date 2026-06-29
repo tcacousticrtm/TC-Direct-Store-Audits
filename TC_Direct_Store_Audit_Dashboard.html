@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TC Direct — Store Audit Dashboard</title>
+<style>
+:root{
+  --bg:#f4f3f0; --panel:#ffffff; --ink:#1b1b1b; --muted:#8a8a8a; --line:#ececec;
+  --gold:#C8A84B; --gold-dk:#856404; --gold-tint:#FFF6DC;
+  --inspire:#F57F17; --educate:#1565C0; --convert:#2E7D32;
+  --shadow:0 1px 3px rgba(0,0,0,.06); --shadow-lg:0 6px 24px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',-apple-system,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+.topbar{height:4px;background:linear-gradient(90deg,var(--gold) 0%,#e3c878 50%,var(--gold) 100%)}
+.header{background:#15140f;color:#fff;padding:22px 0}
+.wrap{max-width:1140px;margin:0 auto;padding:0 20px}
+.header-inner{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
+.header h1{font-size:22px;font-weight:600;letter-spacing:.3px}
+.header h1 .accent{color:var(--gold)}
+.header p{color:#9a978c;font-size:12.5px;margin-top:3px}
+.header .updated{font-size:11px;color:#7a7768;text-align:right}
+.header .updated b{color:#c9c6ba;font-weight:600}
+
+.container{max-width:1140px;margin:0 auto;padding:22px 20px 70px}
+.status-bar{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none;border:1px solid transparent}
+.status-success{background:#E8F6EC;color:#1c6b34;border-color:#cdeccf;display:block}
+.status-error{background:#FBE9EA;color:#8a2c33;border-color:#f3c9cc;display:block}
+.status-info{background:#EAF3F6;color:#0C5460;border-color:#cfe6ec;display:block}
+
+/* Controls */
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.ctrl{display:flex;flex-direction:column;gap:3px}
+.ctrl label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.ctrl select{padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;min-width:150px;cursor:pointer}
+.ctrl select:focus{outline:none;border-color:var(--gold)}
+.toggle{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#555;cursor:pointer;user-select:none;padding-top:16px}
+.toggle input{width:16px;height:16px;accent-color:var(--gold);cursor:pointer}
+.spacer{flex:1}
+.btn{padding:9px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;margin-top:14px}
+.btn-refresh{background:var(--ink);color:#fff}.btn-refresh:hover{background:#000}
+.btn-data{background:#efece3;color:#6b6552;border:1px solid #e0dccd}.btn-data:hover{background:#e7e3d6}
+
+/* KPI row */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--panel);border-radius:12px;padding:18px 18px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
+.kpi .k-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.kpi .k-val{font-size:30px;font-weight:700;line-height:1.1;margin-top:8px}
+.kpi .k-sub{font-size:11.5px;color:var(--muted);margin-top:4px}
+
+.panel{background:var(--panel);border-radius:14px;padding:22px 24px;margin-bottom:20px;box-shadow:var(--shadow)}
+.panel-hd{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px}
+.panel-hd h2{font-size:15px;font-weight:700;letter-spacing:.2px}
+.panel-hd .hint{font-size:11.5px;color:var(--muted)}
+.panel-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+
+/* Legend */
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px}
+.legend .li{display:flex;align-items:center;gap:7px;font-size:12px;color:#555}
+.legend .swatch{width:14px;height:3px;border-radius:2px}
+.legend .dot{width:9px;height:9px;border-radius:50%}
+
+.chart-wrap{width:100%;overflow-x:auto}
+svg.chart{width:100%;height:auto;display:block;min-width:560px}
+
+/* Matrix */
+.mtable{width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px}
+.mtx-scroll{overflow-x:auto}
+.mtable th{text-align:center;padding:9px 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--line);font-weight:700;white-space:nowrap}
+.mtable th.store-col,.mtable td.store-col{text-align:left;position:sticky;left:0;background:var(--panel);z-index:1}
+.mtable td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:center}
+.store-name-cell{display:flex;align-items:center;gap:9px;font-weight:600;white-space:nowrap}
+.store-name-cell .sdot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.cell-score{display:inline-flex;flex-direction:column;align-items:center;gap:2px;padding:5px 9px;border-radius:7px;min-width:54px;font-weight:700}
+.cell-delta{font-size:10px;font-weight:600;opacity:.85}
+.cell-empty{color:#cfcfcf;font-size:13px}
+
+/* Tier palette (matches scorecard) */
+.t-gold{background:var(--gold-tint);color:var(--gold-dk)}
+.t-a{background:#E2F3E7;color:#155724}
+.t-b{background:#DDF0F4;color:#0C5460}
+.t-c{background:#FCE6D6;color:#8B4513}
+.t-fail{background:#FBE0E2;color:#721C24}
+
+/* Store cards */
+.cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.scard{border:1px solid var(--line);border-radius:12px;padding:18px;background:#fff;transition:box-shadow .2s,transform .2s}
+.scard:hover{box-shadow:var(--shadow-lg)}
+.scard-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px}
+.scard-title{display:flex;align-items:center;gap:9px}
+.scard-title .sdot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.scard-title .nm{font-size:14.5px;font-weight:700}
+.scard-title .code{font-size:11px;color:var(--muted);font-weight:600}
+.scard-score{text-align:right;flex-shrink:0}
+.scard-score .pct{font-size:30px;font-weight:700;line-height:1}
+.tier-badge{font-size:11px;font-weight:700;padding:3px 11px;border-radius:14px;display:inline-block;margin-top:4px}
+.stage-mini{margin-bottom:9px}
+.stage-mini .sm-top{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px}
+.stage-mini .sm-name{font-weight:600;color:#666}
+.stage-mini .sm-val{font-weight:700}
+.sm-bar{height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden}
+.sm-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.scard-foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+.scard-foot b{color:#444;font-weight:600}
+.scard-foot .act-flag{color:#b4541a;font-weight:700}
+.scard-notes{font-size:11.5px;color:#777;font-style:italic;margin-top:8px;line-height:1.45}
+.scard-none{opacity:.55}
+.scard-none .pct{color:#bbb;font-size:18px;font-weight:600}
+
+/* Stage journey */
+.journey{display:flex;gap:0;border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.jstep{flex:1;padding:18px 14px;text-align:center}
+.jstep .jl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;opacity:.7}
+.jstep .jn{font-size:15px;font-weight:700;margin-top:2px}
+.jstep .jv{font-size:26px;font-weight:700;margin-top:8px}
+.jstep .js{font-size:10.5px;opacity:.6;margin-top:2px}
+.jstep.ji{background:#FFF8E1;color:var(--inspire)}
+.jstep.je{background:#E3F2FD;color:var(--educate)}
+.jstep.jc{background:#E8F5E9;color:var(--convert)}
+.jarrow{display:flex;align-items:center;font-size:18px;color:#ddd;background:#fff;padding:0 4px}
+
+/* Fallback / data panel */
+.data-panel{display:none;background:#fffdf6;border:1px solid #ece2c4;border-radius:12px;padding:20px 22px;margin-bottom:20px}
+.data-panel.show{display:block}
+.data-panel h3{font-size:14px;margin-bottom:8px}
+.data-panel p{font-size:12.5px;color:#665e44;margin-bottom:12px;line-height:1.6}
+.data-panel ol{font-size:12.5px;color:#665e44;margin:0 0 14px 18px;line-height:1.7}
+.data-panel code{background:#f3eed8;padding:1px 6px;border-radius:4px;font-size:11.5px}
+.data-panel textarea{width:100%;height:120px;border:1px solid #e0d8be;border-radius:8px;padding:10px;font-family:'Courier New',monospace;font-size:11.5px;resize:vertical}
+.data-panel .dp-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+
+.empty{text-align:center;padding:50px 20px;color:#bbb}
+.empty .ico{font-size:42px;display:block;margin-bottom:10px}
+.empty p{font-size:13px}
+
+.footnote{font-size:11px;color:#b0ada3;text-align:center;margin-top:8px}
+
+@media(max-width:900px){
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .cards-grid{grid-template-columns:1fr}
+  .journey{flex-direction:column}.jarrow{display:none}
+}
+@media(max-width:560px){.kpi-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="header">
+  <div class="wrap header-inner">
+    <div>
+      <h1>TC Direct <span class="accent">·</span> Store Audit Dashboard</h1>
+      <p>Week-on-week performance across TC Acoustic direct stores &nbsp;|&nbsp; Inspire → Educate → Convert</p>
+    </div>
+    <div class="updated">Source: <b>Audit Results</b> sheet<br><span id="lastUpdated">—</span></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="status-bar" id="statusBar"></div>
+
+  <!-- Data source fallback panel -->
+  <div class="data-panel" id="dataPanel">
+    <h3>Update your audit data</h3>
+    <p>The dashboard is showing its <b>built-in snapshot</b> so you always see real numbers. To pull the latest, use either method below. <b>Heads-up:</b> automatic live sync can't run inside Claude's preview window (external connections are blocked there) — it works once this file is hosted on GitHub Pages, or opened as a normal file in your browser.</p>
+    <ol>
+      <li><b>Make the sheet readable:</b> open the sheet → <b>Share</b> → General access → <b>Anyone with the link · Viewer</b>, then click <b>Refresh data</b> above. The dashboard reads the <code>Audit Results</code> tab; nothing is editable.</li>
+      <li><b>Paste a CSV export:</b> in the sheet, select the <code>Audit Results</code> tab → File → Download → CSV, open it, and paste the contents below.</li>
+    </ol>
+    <textarea id="pasteArea" placeholder="Paste the Audit Results CSV here…"></textarea>
+    <div class="dp-actions">
+      <button class="btn btn-refresh" style="margin-top:0" onclick="loadFromPaste()">Load pasted data</button>
+      <label class="btn btn-data" style="margin-top:0;cursor:pointer">Choose CSV file…<input type="file" id="fileInput" accept=".csv,text/csv" style="display:none" onchange="loadFromFile(event)"></label>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="ctrl">
+      <label>Trend metric</label>
+      <select id="metricSel" onchange="render()">
+        <option value="overall">Overall %</option>
+        <option value="inspire">Inspire %</option>
+        <option value="educate">Educate %</option>
+        <option value="convert">Convert %</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>Focus store</label>
+      <select id="storeSel" onchange="render()">
+        <option value="all">All stores</option>
+      </select>
+    </div>
+    <label class="toggle"><input type="checkbox" id="hideTest" checked onchange="processAndRender()"> Hide test entries</label>
+    <div class="spacer"></div>
+    <button class="btn btn-data" onclick="toggleDataPanel()">Data source</button>
+    <button class="btn btn-refresh" onclick="loadLive()">Refresh data</button>
+  </div>
+
+  <div id="dashboard"></div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — point this at your sheet / tab
+   ============================================================ */
+const CONFIG = {
+  SHEET_ID: "1WG_yzDmFKhSNnRZGXjdm8n5VZgt7BqR6Z427h55N5V0",
+  SHEET_NAME: "Audit Results",   // exact tab name
+  GID: null                      // optional: set a numeric gid to use instead of name
+};
+function gvizUrl(){
+  const base = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&headers=1`;
+  return CONFIG.GID != null ? `${base}&gid=${CONFIG.GID}` : `${base}&sheet=${encodeURIComponent(CONFIG.SHEET_NAME)}`;
+}
+
+/* Store identity (order + colours), matches the scorecard */
+const STORE_ORDER = ["SFS","Adelphi","SCS","SST"];
+const STORE_META = {
+  SFS:    {name:"Sonos Flagship @ Wheelock",  color:"#C8A84B"},
+  Adelphi:{name:"TC Acoustic @ Adelphi",      color:"#2563EB"},
+  SCS:    {name:"Sonos Concept @ Starhill",   color:"#059669"},
+  SST:    {name:"Sonos Store Thailand @ EmSphere", color:"#7C3AED"}
+};
+const FALLBACK_COLORS = ["#0EA5E9","#DB2777","#CA8A04","#475569","#E11D48"];
+
+let RAW = [];        // all parsed records
+let RECORDS = [];    // processed (deduped, filtered)
+
+/* ============================================================
+   Helpers
+   ============================================================ */
+function num(v){ if(v==null) return null; const n=parseFloat(String(v).replace(/[^0-9.\-]/g,"")); return isNaN(n)?null:n; }
+function parseDate(s){
+  if(!s) return null; s=String(s).trim();
+  let m=s.match(/^Date\((\d+),(\d+),(\d+)/);            if(m) return new Date(+m[1],+m[2],+m[3]);
+  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);            if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);          if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+  const d=new Date(s); return isNaN(d)?null:d;
+}
+function isoWeek(d){
+  const x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const day=(x.getUTCDay()+6)%7; x.setUTCDate(x.getUTCDate()-day+3);
+  const firstThu=new Date(Date.UTC(x.getUTCFullYear(),0,4));
+  const fd=(firstThu.getUTCDay()+6)%7; firstThu.setUTCDate(firstThu.getUTCDate()-fd+3);
+  const week=1+Math.round((x-firstThu)/(604800000));
+  return {year:x.getUTCFullYear(), week};
+}
+function weekKey(d){ const w=isoWeek(d); return w.year+"-W"+String(w.week).padStart(2,"0"); }
+function weekMonday(d){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); return x; }
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtDate(d){ return d ? `${d.getDate()} ${MON[d.getMonth()]}` : ""; }
+function fmtDateY(d){ return d ? `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}` : ""; }
+
+function tierOf(p){
+  if(p==null) return {l:"—",c:""};
+  if(p>=90) return {l:"GOLD",c:"t-gold"};
+  if(p>=80) return {l:"A",c:"t-a"};
+  if(p>=70) return {l:"B",c:"t-b"};
+  if(p>=60) return {l:"C",c:"t-c"};
+  return {l:"FAIL",c:"t-fail"};
+}
+function scoreColor(p){
+  if(p==null) return "#999";
+  if(p>=90) return "#856404"; if(p>=80) return "#155724";
+  if(p>=70) return "#0C5460"; if(p>=60) return "#8B4513"; return "#721C24";
+}
+function storeColor(code,i){ return (STORE_META[code]&&STORE_META[code].color) || FALLBACK_COLORS[i%FALLBACK_COLORS.length]; }
+function storeName(code){ return (STORE_META[code]&&STORE_META[code].name) || code; }
+
+function status(msg,type){ const el=document.getElementById("statusBar"); el.textContent=msg; el.className="status-bar status-"+type; }
+
+/* ============================================================
+   CSV parsing + ingestion
+   ============================================================ */
+function parseCSV(text){
+  const rows=[]; let row=[], cur="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else{
+      if(c==='"') q=true;
+      else if(c===',') {row.push(cur);cur="";}
+      else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur="";}
+      else if(c==='\r'){}
+      else cur+=c;
+    }
+  }
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+const HEADER_MAP = {
+  "saved at":"saved","store code":"code","store name":"name","audit date":"date",
+  "audit month":"month","audited by":"auditor","audit method":"method",
+  "previous score":"prev","inspire (%)":"inspire","educate (%)":"educate",
+  "convert (%)":"convert","overall (%)":"overall","tier":"tier",
+  "items passed":"passed","total items":"total","open actions":"actions","notes":"notes"
+};
+function ingest(rows){
+  if(!rows || rows.length<2){ RAW=[]; processAndRender(); return; }
+  const head = rows[0].map(h=>String(h).trim().toLowerCase());
+  const idx = {};
+  head.forEach((h,i)=>{ if(HEADER_MAP[h]!=null) idx[HEADER_MAP[h]]=i; });
+  const out=[];
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r];
+    if(!row || row.every(c=>String(c).trim()==="")) continue;
+    const get=(k)=> idx[k]!=null ? row[idx[k]] : "";
+    const code=String(get("code")).trim();
+    const dateObj=parseDate(get("date"));
+    if(!code || !dateObj) continue;
+    out.push({
+      saved: parseDate(get("saved")) || dateObj,
+      code, name:String(get("name")).trim()||storeName(code),
+      date:dateObj, month:String(get("month")).trim(),
+      auditor:String(get("auditor")).trim(), method:String(get("method")).trim(),
+      inspire:num(get("inspire")), educate:num(get("educate")),
+      convert:num(get("convert")), overall:num(get("overall")),
+      passed:num(get("passed")), total:num(get("total")),
+      actions:num(get("actions")), notes:String(get("notes")).trim()
+    });
+  }
+  RAW = out;
+  processAndRender();
+}
+
+/* Dedupe by store+date (keep latest "saved"), apply test filter */
+function processAndRender(){
+  const hideTest = document.getElementById("hideTest").checked;
+  let recs = RAW.slice();
+  if(hideTest) recs = recs.filter(r=> (r.auditor||"").toLowerCase()!=="test");
+  const map={};
+  recs.forEach(r=>{
+    const k = r.code+"|"+r.date.toISOString().slice(0,10);
+    if(!map[k] || r.saved>map[k].saved) map[k]=r;
+  });
+  RECORDS = Object.values(map).sort((a,b)=> a.date-b.date);
+  populateStoreFilter();
+  render();
+}
+function populateStoreFilter(){
+  const sel=document.getElementById("storeSel");
+  const cur=sel.value;
+  const codes = STORE_ORDER.filter(c=>RECORDS.some(r=>r.code===c))
+    .concat([...new Set(RECORDS.map(r=>r.code))].filter(c=>!STORE_ORDER.includes(c)));
+  sel.innerHTML='<option value="all">All stores</option>'+codes.map(c=>`<option value="${c}">${c} — ${storeName(c)}</option>`).join("");
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+function render(){
+  const dash=document.getElementById("dashboard");
+  if(!RECORDS.length){
+    dash.innerHTML=`<div class="panel"><div class="empty"><span class="ico">📊</span><p>No audit records loaded yet. Use <b>Refresh data</b> to pull from the sheet, or <b>Data source</b> to paste a CSV.</p></div></div>`;
+    return;
+  }
+  const metric=document.getElementById("metricSel").value;
+  const focus=document.getElementById("storeSel").value;
+  dash.innerHTML = kpiHTML() + trendHTML(metric,focus) + matrixHTML() + stageHTML() + cardsHTML();
+}
+
+/* latest record per store */
+function latestByStore(){
+  const m={};
+  RECORDS.forEach(r=>{ if(!m[r.code] || r.date>m[r.code].date) m[r.code]=r; });
+  return m;
+}
+function orderedCodes(){
+  const present=[...new Set(RECORDS.map(r=>r.code))];
+  return STORE_ORDER.filter(c=>present.includes(c)).concat(present.filter(c=>!STORE_ORDER.includes(c)));
+}
+
+function kpiHTML(){
+  const latest=latestByStore();
+  const codes=orderedCodes();
+  const overalls=codes.map(c=>latest[c].overall).filter(v=>v!=null);
+  const avg = overalls.length ? Math.round(overalls.reduce((a,b)=>a+b,0)/overalls.length) : null;
+  const goldCount = codes.filter(c=> latest[c].overall!=null && latest[c].overall>=90).length;
+  const totalActions = codes.reduce((s,c)=> s + (latest[c].actions||0), 0);
+  let best=null,worst=null;
+  codes.forEach(c=>{ const v=latest[c].overall; if(v==null)return;
+    if(!best||v>best.v) best={c,v}; if(!worst||v<worst.v) worst={c,v}; });
+  const weeks = new Set(RECORDS.map(r=>weekKey(r.date))).size;
+
+  return `<div class="kpi-row">
+    <div class="kpi"><div class="k-label">Stores audited</div><div class="k-val">${codes.length}</div><div class="k-sub">${RECORDS.length} audit${RECORDS.length!==1?"s":""} · ${weeks} week${weeks!==1?"s":""}</div></div>
+    <div class="kpi"><div class="k-label">Avg overall (latest)</div><div class="k-val" style="color:${scoreColor(avg)}">${avg!=null?avg+"%":"—"}</div><div class="k-sub">across latest audits</div></div>
+    <div class="kpi"><div class="k-label">Gold stores</div><div class="k-val" style="color:var(--gold-dk)">${goldCount}<span style="font-size:16px;color:#bbb">/${codes.length}</span></div><div class="k-sub">≥ 90% latest score</div></div>
+    <div class="kpi"><div class="k-label">Top performer</div><div class="k-val" style="font-size:20px;color:${best?scoreColor(best.v):'#999'}">${best?best.c:"—"}</div><div class="k-sub">${best?best.v+"% · "+tierOf(best.v).l:""}</div></div>
+    <div class="kpi"><div class="k-label">Open actions</div><div class="k-val" style="color:${totalActions>0?'#b4541a':'#2E7D32'}">${totalActions}</div><div class="k-sub">${worst?"lowest: "+worst.c+" "+worst.v+"%":""}</div></div>
+  </div>`;
+}
+
+/* Week-on-week SVG line chart */
+function trendHTML(metric,focus){
+  const metricName={overall:"Overall",inspire:"Inspire",educate:"Educate",convert:"Convert"}[metric];
+  let codes=orderedCodes();
+  if(focus!=="all") codes=codes.filter(c=>c===focus);
+
+  // series
+  const series=codes.map((c,i)=>{
+    const pts=RECORDS.filter(r=>r.code===c && r[metric]!=null)
+      .map(r=>({t:r.date.getTime(), v:r[metric], date:r.date}))
+      .sort((a,b)=>a.t-b.t);
+    return {code:c, color:storeColor(c,STORE_ORDER.indexOf(c)<0?i:STORE_ORDER.indexOf(c)), pts};
+  }).filter(s=>s.pts.length);
+
+  const allT=[...new Set(RECORDS.map(r=>r.date.getTime()))].sort((a,b)=>a-b);
+  const W=940,H=360, padL=44,padR=20,padT=24,padB=46;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const minT=allT[0], maxT=allT[allT.length-1];
+  const xOf=t=> (minT===maxT)? padL+plotW/2 : padL+(t-minT)/(maxT-minT)*plotW;
+  const yOf=v=> padT+(100-v)/100*plotH;
+
+  let svg=`<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img">`;
+  // gold target band (90-100) + gridlines
+  svg+=`<rect x="${padL}" y="${yOf(100)}" width="${plotW}" height="${yOf(90)-yOf(100)}" fill="#FFF6DC" opacity="0.6"/>`;
+  [60,70,80,90].forEach(g=>{
+    svg+=`<line x1="${padL}" y1="${yOf(g)}" x2="${padL+plotW}" y2="${yOf(g)}" stroke="${g===90?'#C8A84B':'#eee'}" stroke-width="1" stroke-dasharray="${g===90?'5 4':'0'}"/>`;
+    svg+=`<text x="${padL-8}" y="${yOf(g)+3.5}" text-anchor="end" font-size="10" fill="#aaa">${g}</text>`;
+  });
+  svg+=`<text x="${padL+plotW}" y="${yOf(90)-5}" text-anchor="end" font-size="9.5" fill="#C8A84B" font-weight="700">GOLD TARGET 90%</text>`;
+  // baseline
+  svg+=`<line x1="${padL}" y1="${yOf(0)}" x2="${padL+plotW}" y2="${yOf(0)}" stroke="#ddd" stroke-width="1"/>`;
+  // x ticks (each audit date)
+  allT.forEach(t=>{
+    const x=xOf(t);
+    svg+=`<line x1="${x}" y1="${yOf(0)}" x2="${x}" y2="${yOf(0)+5}" stroke="#ccc"/>`;
+    svg+=`<text x="${x}" y="${yOf(0)+19}" text-anchor="middle" font-size="10" fill="#999">${fmtDate(new Date(t))}</text>`;
+  });
+  // series lines + dots
+  series.forEach(s=>{
+    if(s.pts.length>1){
+      const dpath=s.pts.map((p,i)=>(i?"L":"M")+xOf(p.t)+" "+yOf(p.v)).join(" ");
+      svg+=`<path d="${dpath}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+    s.pts.forEach(p=>{
+      svg+=`<circle cx="${xOf(p.t)}" cy="${yOf(p.v)}" r="4.5" fill="#fff" stroke="${s.color}" stroke-width="2.4"><title>${s.code} · ${fmtDateY(p.date)} · ${p.v}%</title></circle>`;
+      svg+=`<text x="${xOf(p.t)}" y="${yOf(p.v)-9}" text-anchor="middle" font-size="10" font-weight="700" fill="${s.color}">${p.v}%</text>`;
+    });
+  });
+  svg+=`</svg>`;
+
+  const legend = series.map(s=>`<span class="li"><span class="swatch" style="background:${s.color}"></span>${s.code}</span>`).join("");
+  const note = (minT===maxT) ? `<span class="hint">Single audit date so far — lines appear as the schedule progresses week on week.</span>` : "";
+
+  return `<div class="panel">
+    <div class="panel-hd"><h2>${metricName} score — week on week</h2>${note}</div>
+    <div class="panel-sub">Each point is an audit; the dashed gold line marks the 90% Gold threshold.</div>
+    <div class="chart-wrap">${svg}</div>
+    <div class="legend">${legend||'<span class="hint">No data for this metric yet.</span>'}</div>
+  </div>`;
+}
+
+/* Week-on-week matrix table */
+function matrixHTML(){
+  const weeks=[...new Set(RECORDS.map(r=>weekKey(r.date)))].sort();
+  const weekLabel={};
+  weeks.forEach(wk=>{
+    const r=RECORDS.find(x=>weekKey(x.date)===wk);
+    const mon=weekMonday(r.date);
+    weekLabel[wk]=`W${isoWeek(r.date).week}<br><span style="font-weight:400;font-size:9.5px">${fmtDate(mon)}</span>`;
+  });
+  const codes=orderedCodes();
+
+  let head=`<th class="store-col">Store</th>`+weeks.map(wk=>`<th>${weekLabel[wk]}</th>`).join("");
+  let body="";
+  codes.forEach(c=>{
+    const color=storeColor(c,STORE_ORDER.indexOf(c)<0?0:STORE_ORDER.indexOf(c));
+    let prevVal=null;
+    let cells="";
+    weeks.forEach(wk=>{
+      const inWk=RECORDS.filter(r=>r.code===c && weekKey(r.date)===wk).sort((a,b)=>b.date-a.date);
+      if(inWk.length){
+        const v=inWk[0].overall, t=tierOf(v);
+        let delta="";
+        if(prevVal!=null && v!=null){ const d=v-prevVal; delta=`<span class="cell-delta" style="color:${d>0?'#1c7a3a':d<0?'#b4541a':'#999'}">${d>0?'▲':d<0?'▼':'–'}${d!==0?Math.abs(d):''}</span>`; }
+        cells+=`<td><span class="cell-score ${t.c}">${v!=null?v+"%":"—"}${delta}</span></td>`;
+        if(v!=null) prevVal=v;
+      } else {
+        cells+=`<td><span class="cell-empty">·</span></td>`;
+      }
+    });
+    body+=`<tr><td class="store-col"><span class="store-name-cell"><span class="sdot" style="background:${color}"></span><span>${c}<br><span style="font-weight:400;font-size:10.5px;color:#999">${storeName(c)}</span></span></span></td>${cells}</tr>`;
+  });
+
+  return `<div class="panel">
+    <div class="panel-hd"><h2>Overall score by week</h2><span class="hint">▲▼ vs previous audited week</span></div>
+    <div class="panel-sub">Latest audit shown per store, per ISO week — colour-coded by tier.</div>
+    <div class="mtx-scroll"><table class="mtable"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+  </div>`;
+}
+
+/* Stage breakdown (avg of latest audits) */
+function stageHTML(){
+  const latest=latestByStore();
+  const codes=orderedCodes();
+  const avg=(key)=>{ const vals=codes.map(c=>latest[c][key]).filter(v=>v!=null); return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null; };
+  const i=avg("inspire"), e=avg("educate"), v=avg("convert");
+  const f=(x)=>x!=null?x+"%":"—";
+  return `<div class="panel">
+    <div class="panel-hd"><h2>Stage averages — latest audits</h2></div>
+    <div class="panel-sub">Mean score across all stores' most recent audit, by journey stage.</div>
+    <div class="journey">
+      <div class="jstep ji"><div class="jl">Stage 1</div><div class="jn">Inspire</div><div class="jv">${f(i)}</div><div class="js">first impression &amp; space</div></div>
+      <div class="jarrow">→</div>
+      <div class="jstep je"><div class="jl">Stage 2</div><div class="jn">Educate</div><div class="jv">${f(e)}</div><div class="js">product &amp; demo experience</div></div>
+      <div class="jarrow">→</div>
+      <div class="jstep jc"><div class="jl">Stage 3</div><div class="jn">Convert</div><div class="jv">${f(v)}</div><div class="js">pricing, tags &amp; close</div></div>
+    </div>
+  </div>`;
+}
+
+/* Per-store cards */
+function cardsHTML(){
+  const latest=latestByStore();
+  const codes=orderedCodes();
+  const cards=codes.map(c=>{
+    const r=latest[c]; const color=storeColor(c,STORE_ORDER.indexOf(c)<0?0:STORE_ORDER.indexOf(c));
+    const t=tierOf(r.overall);
+    const stage=(label,val,cls)=>{
+      const pct=val!=null?val:0;
+      return `<div class="stage-mini"><div class="sm-top"><span class="sm-name">${label}</span><span class="sm-val" style="color:${scoreColor(val)}">${val!=null?val+"%":"—"}</span></div><div class="sm-bar"><div class="sm-fill" style="width:${pct}%;background:${cls}"></div></div></div>`;
+    };
+    const actions = r.actions||0;
+    return `<div class="scard">
+      <div class="scard-hd">
+        <div class="scard-title"><span class="sdot" style="background:${color}"></span><div><div class="nm">${storeName(c)}</div><div class="code">${c} · ${r.method||"—"}</div></div></div>
+        <div class="scard-score"><div class="pct" style="color:${scoreColor(r.overall)}">${r.overall!=null?r.overall+"%":"—"}</div><span class="tier-badge ${t.c}">${t.l}</span></div>
+      </div>
+      ${stage("Inspire",r.inspire,"var(--inspire)")}
+      ${stage("Educate",r.educate,"var(--educate)")}
+      ${stage("Convert",r.convert,"var(--convert)")}
+      <div class="scard-foot">
+        <span><b>${fmtDateY(r.date)}</b> · ${r.auditor||"—"}</span>
+        <span>${r.passed!=null&&r.total!=null?`<b>${r.passed}/${r.total}</b> items`:""} ${actions>0?`· <span class="act-flag">${actions} open action${actions!==1?"s":""}</span>`:`· <b style="color:#2E7D32">no open actions</b>`}</span>
+      </div>
+      ${r.notes?`<div class="scard-notes">“${r.notes}”</div>`:""}
+    </div>`;
+  }).join("");
+  return `<div class="panel"><div class="panel-hd"><h2>Store snapshot — latest audit</h2></div><div class="cards-grid">${cards}</div></div>`;
+}
+
+/* ============================================================
+   Data loading
+   ============================================================ */
+function looksValid(rows){
+  if(!rows || rows.length<2) return false;
+  const h=rows[0].map(x=>String(x).trim().toLowerCase());
+  return h.includes("store code") && h.includes("overall (%)");
+}
+async function fetchLive(isManual){
+  if(isManual){ status("Loading from Google Sheet…","info"); document.getElementById("dataPanel").classList.remove("show"); }
+  try{
+    const res=await fetch(gvizUrl(),{cache:"no-store"});
+    const text=await res.text();
+    const rows=parseCSV(text);
+    if(!looksValid(rows)) throw new Error("blocked");   // keeps the snapshot intact
+    ingest(rows);
+    status(`Live data loaded — ${RAW.length} record${RAW.length!==1?"s":""} from the sheet.`,"success");
+    document.getElementById("lastUpdated").innerHTML="Live · Updated <b>"+new Date().toLocaleString()+"</b>";
+    return true;
+  }catch(e){
+    if(isManual){
+      status("Couldn't reach the sheet from here. If you're viewing inside Claude's preview, external connections are blocked — host the file on GitHub Pages, or paste the CSV below to update now.","info");
+      document.getElementById("dataPanel").classList.add("show");
+    }else{
+      status("Showing the built-in snapshot. Live sync is blocked in this preview (normal) and will connect once hosted on GitHub Pages — or paste the latest CSV anytime to update.","info");
+    }
+    return false;
+  }
+}
+function loadLive(){ return fetchLive(true); }
+function loadFromPaste(){
+  const txt=document.getElementById("pasteArea").value.trim();
+  if(!txt){ status("Paste some CSV data first.","error"); return; }
+  ingest(parseCSV(txt));
+  status(`Loaded ${RAW.length} record${RAW.length!==1?"s":""} from pasted data.`,"success");
+  document.getElementById("lastUpdated").innerHTML="Loaded from paste · <b>"+new Date().toLocaleDateString()+"</b>";
+  document.getElementById("dataPanel").classList.remove("show");
+}
+function loadFromFile(ev){
+  const file=ev.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{ ingest(parseCSV(e.target.result));
+    status(`Loaded ${RAW.length} record${RAW.length!==1?"s":""} from ${file.name}.`,"success");
+    document.getElementById("lastUpdated").innerHTML="Loaded from file · <b>"+new Date().toLocaleDateString()+"</b>";
+    document.getElementById("dataPanel").classList.remove("show");
+  };
+  reader.readAsText(file);
+}
+function toggleDataPanel(){ document.getElementById("dataPanel").classList.toggle("show"); }
+
+/* Built-in snapshot of the Audit Results tab — guarantees the dashboard
+   shows real data immediately, even where live fetch is blocked (e.g. Claude's
+   preview). Refresh from the sheet (when hosted) or paste a CSV to update. */
+const SEED_CSV = `Saved At,Store Code,Store Name,Audit Date,Audit Month,Audited By,Audit Method,Previous Score,Inspire (%),Educate (%),Convert (%),Overall (%),Tier,Items Passed,Total Items,Open Actions,Notes
+"25/03/2026, 5:23:50 pm",SFS,Sonos Flagship @ Wheelock,2026-03-25,2026-03,Test,in-person,,90,85,95,89,A,25,28,1,Test write
+"25/03/2026, 5:37:41 pm",SFS,Sonos Flagship @ Wheelock,2026-03-25,2026-03,Test,in-person,,90,85,95,89,A,25,28,1,Test write
+"25/03/2026, 6:17:22 pm",SST,Sonos Store Thailand @ EmSphere,2026-03-25,2026-03,Sylvia,in-person,97% (GOLD) — 2026-03-25,100,100,100,100,GOLD,30,30,0
+"28/05/2026, 11:41:47 am",SCS,Sonos Concept @ Starhill,2026-05-25,2026-05,Sylvia,remote,,70,87,67,77,B,24,31,0`;
+
+/* boot: instant render from the snapshot, then a best-effort live refresh */
+ingest(parseCSV(SEED_CSV));
+document.getElementById("lastUpdated").innerHTML="Built-in snapshot";
+fetchLive(false);
+</script>
+</body>
+</html>
